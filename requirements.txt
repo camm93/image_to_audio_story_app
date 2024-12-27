@@ -1,0 +1,9 @@
+huggingface_hub
+# langchain
+langchain-openai
+pillow
+pydub
+python-dotenv
+streamlit
+torch
+transformers
