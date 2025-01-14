@@ -1,8 +1,10 @@
+fastapi
 huggingface_hub
 # langchain
-langchain-openai
+# langchain-openai
+pandas
 pillow
-pydub
+# pydub
 python-dotenv
 streamlit
 torch
