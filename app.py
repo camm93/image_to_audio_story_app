@@ -66,42 +66,8 @@ def generate_story(scenario: str, client: InferenceClient) -> str:
         max_tokens=100
     )
 
-    story = completion.choices[0].message
-    print(story)
+    story = completion.choices[0].message["content"]
     return story
-    
-
-def generate_story_with_openai(scenario: str) -> str:
-    # system_template = """
-    # You are a story teller. Generate a short story based on a simple narrative, the story should be no more than 50 words.
-
-    # CONTEXT: {scenario}
-    # STORY:
-    # """
-    # prompt_template = ChatPromptTemplate.from_messages(
-    #     [("system", system_template), ("user", "{text}")]
-    # )
-    # prompt = prompt_template.invoke({"scenario": "scenario", })
-    # prompt
-    # prompt.to_messages()
-
-    if not os.environ.get("OPENAI_API_KEY"):
-        os.environ["OPENAI_API_KEY"] = getpass.getpass(
-            "Enter API key for OpenAI: ")
-
-    model = ChatOpenAI(model="gpt-3.5-turbo")
-
-    messages = [
-        SystemMessage("You are a story teller. Generate a short story based on a simple narrative, the story should be no more than 50 words."),
-        HumanMessage(scenario),
-    ]
-
-    response = model.invoke(messages)
-    story = response.content
-    print(story)
-    return response, story
-
-# Text to Speech
 
 
 def text_to_speech(text: str, api_token: str):
@@ -130,21 +96,52 @@ def text_to_speech(text: str, api_token: str):
         i += 1
 
     if response and response.status_code == 200:
-        with open("assets/story.mp3", "wb") as file:
-            file.write(response.content)
-        print("Audio file saved successfully!")
+        # with open("assets/story.mp3", "wb") as file:
+            # file.write(response.content)
+        # print("Audio file saved successfully!")
+        return response.content
     else:
         print(f"Failed to process the request: {response.status_code}")
 
-    print(vars(response))
-    return response
+        print(vars(response))
+        return None
+
+
+# def display_audio(audio_file: bytes):
+#     with open("assets/story.mp3", "rb") as file:
+#         audio_file = file.read()
+#         st.audio(audio_bytes, format="audio/mp3") 
+
+
+def main():
+    st.title("Story Generation")
+
+    uploaded_image = st.file_uploader("Load an image to create a compelling story.", type=['png', 'jpg'])
+
+    if uploaded_image:
+        st.image(uploaded_image)
+
+        image = Image.open(uploaded_image)
+        raw_scenario = img2text(image)
+        st.write(raw_scenario)
+        scenario = st.text_area(
+            "## Image Description",
+            value=raw_scenario,
+            help="Modify to enhance the text."
+        )
+
+        if st.button("Generate Story"):
+            HF_TOKEN = os.getenv('HUGGING_FACE_API_TOKEN')
+            hf_client = InferenceClient(api_key=HF_TOKEN)
+            story = "Once upon a time there was light in my life, but now it's only falling apart..."
+            # story = generate_story(scenario, client=hf_client)
+            st.write(story)
+            audio = text_to_speech(story, HF_TOKEN)
+
+            if audio:
+                st.audio(audio, format="audio/mp3")
 
 
 if __name__ == "__main__":
-    HF_TOKEN = os.getenv('HUGGING_FACE_API_TOKEN')
-    # hf_client = InferenceClient(api_key=HF_TOKEN)
-    # scenario = img2text("assets/man on island.png")
-    story = "Once upon a time there was light in my life, but now it's only falling apart..."
-    # story = generate_story(scenario, client=hf_client)
-    audio = text_to_speech(story, HF_TOKEN)
+    main()
     print("Done Executing")
