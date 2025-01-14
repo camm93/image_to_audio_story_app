@@ -5,6 +5,7 @@
 
 # from IPython.display import Audio
 
+from io import BytesIO
 import os
 import requests
 import time
@@ -19,18 +20,21 @@ from huggingface_hub import InferenceClient
 # from langchain_core.messages import HumanMessage, SystemMessage
 # from langchain_core.prompts import ChatPromptTemplate
 
+from PIL import Image
+import streamlit as st
+# from streamlit import UploadedFile
 from transformers import pipeline
 
 load_dotenv()
 
-# img2text
-def img2text(url: str) -> str:
+
+def img2text(image: BytesIO) -> str:
     """Receives an image and converts it into text using a pre-trained model from huggingfaces.
 
     Parameters
     ----------
-    url : str
-        The file location of the image
+    image : BytesIO
+        Image to convert into text.
 
     Returns
     -------
@@ -40,12 +44,10 @@ def img2text(url: str) -> str:
     model_id = "Salesforce/blip-image-captioning-base"
     image_to_text = pipeline(task="image-to-text",
                              model=model_id)
-    text = image_to_text(url)[0]["generated_text"]
 
-    print(text)
+    text = image_to_text(image)[0]["generated_text"]
     return text
 
-# llm
 
 def generate_story(scenario: str, client: InferenceClient) -> str:
     """Uses an LLM model to write a story around a given scenario"""
