@@ -20,9 +20,11 @@ from huggingface_hub import InferenceClient
 # from langchain_core.messages import HumanMessage, SystemMessage
 # from langchain_core.prompts import ChatPromptTemplate
 
+from datasets import load_dataset
 from PIL import Image
 import streamlit as st
 # from streamlit import UploadedFile
+import torch
 from transformers import pipeline
 
 load_dotenv()
@@ -70,41 +72,70 @@ def generate_story(scenario: str, client: InferenceClient) -> str:
     return story
 
 
-def text_to_speech(text: str, api_token: str):
-    API_URL = "https://api-inference.huggingface.co/models/myshell-ai/MeloTTS-English"
-    headers = {"Authorization": f"Bearer {api_token}"}
-    payloads = {"inputs": text}
+def text_to_speech(text: str):
+    """Receives a text and converts it into audio/speech using a pre-trained model from huggingfaces.
 
-    max_attempts = 5
-    i = 0
-    response = None
-    while i < max_attempts:
+    Parameters
+    ----------
+    text : str
+        text/story to convert into speech.
+
+    Returns
+    -------
+    dict
+        a speech.
+    """
+    model_id = "microsoft/speecht5_tts"
+    pipe = pipeline(task="text-to-speech",
+                             model=model_id)
     
-        response = requests.post(API_URL, headers=headers, json=payloads)
-        # print("1", response)
-        # print("2", response.text)
-        if response.status_code in (500, 503):
-            print(type(response))
-            print(response)
-            error_message = response.json().get("error", "")
-            estimated_time = response.json().get("estimated_time", 5)
-            print(f"Model is loading. Retrying in {estimated_time} seconds...")
-            time.sleep(estimated_time)
-        else:
-            break
+    embeddings_dataset = load_dataset(
+        "Matthijs/cmu-arctic-xvectors", split="validation")
+    speaker_embedding = torch.tensor(
+        embeddings_dataset[7306]["xvector"]).unsqueeze(0)
+
+    # [0]["generated_text"]
+    speech = pipe(text, forward_params={
+                  "speaker_embeddings": speaker_embedding})
+    print(speech)
+    return speech
+
+
+# def text_to_speech(text: str, api_token: str):
+#     API_URL = "https://api-inference.huggingface.co/models/myshell-ai/MeloTTS-English"
+#     headers = {"Authorization": f"Bearer {api_token}"}
+#     payloads = {"inputs": text}
+
+#     max_attempts = 5
+#     i = 0
+#     response = None
+#     while i < max_attempts:
+    
+#         response = requests.post(API_URL, headers=headers, json=payloads)
+#         # print("1", response)
+#         # print("2", response.text)
+#         if response.status_code in (500, 503):
+#             print(type(response))
+#             print(response)
+#             error_message = response.json().get("error", "")
+#             estimated_time = response.json().get("estimated_time", 5)
+#             print(f"Model is loading. Retrying in {estimated_time} seconds...")
+#             time.sleep(estimated_time)
+#         else:
+#             break
         
-        i += 1
+#         i += 1
 
-    if response and response.status_code == 200:
-        # with open("assets/story.mp3", "wb") as file:
-            # file.write(response.content)
-        # print("Audio file saved successfully!")
-        return response.content
-    else:
-        print(f"Failed to process the request: {response.status_code}")
+#     if response and response.status_code == 200:
+#         # with open("assets/story.mp3", "wb") as file:
+#             # file.write(response.content)
+#         # print("Audio file saved successfully!")
+#         return response.content
+#     else:
+#         print(f"Failed to process the request: {response.status_code}")
 
-        print(vars(response))
-        return None
+#         print(vars(response))
+#         return None
 
 
 # def display_audio(audio_file: bytes):
@@ -116,7 +147,11 @@ def text_to_speech(text: str, api_token: str):
 def main():
     st.title("Story Generation")
 
-    uploaded_image = st.file_uploader("Load an image to create a compelling story.", type=['png', 'jpg'])
+    uploaded_image = True
+    uploaded_image = st.file_uploader(
+        "Load an image to create a compelling story.",
+        type=['png', 'jpg']
+    )
 
     if uploaded_image:
         st.image(uploaded_image)
@@ -133,13 +168,13 @@ def main():
         if st.button("Generate Story"):
             HF_TOKEN = os.getenv('HUGGING_FACE_API_TOKEN')
             hf_client = InferenceClient(api_key=HF_TOKEN)
-            story = "Once upon a time there was light in my life, but now it's only falling apart..."
-            # story = generate_story(scenario, client=hf_client)
+            # story = "Once upon a time there was light in my life, but now it's only falling apart..."
+            story = generate_story(scenario, client=hf_client)
             st.write(story)
-            audio = text_to_speech(story, HF_TOKEN)
-
-            if audio:
-                st.audio(audio, format="audio/mp3")
+            speech = text_to_speech(story)  #, HF_TOKEN)
+            # st.audio("assets/testaudio.mp3", format="audio/mp3")
+            if speech:
+                st.audio(speech["audio"], sample_rate=speech["sampling_rate"])
 
 
 if __name__ == "__main__":
