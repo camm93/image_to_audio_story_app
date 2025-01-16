@@ -41,27 +41,6 @@ def img2text(image: BytesIO) -> str:
     return text
 
 
-# def generate_story(scenario: str, client: InferenceClient) -> str:
-#     """Uses an LLM model to write a story around a given scenario"""
-#     model_id = "Qwen/QwQ-32B-Preview"  # "meta-llama/Llama-3.2-1B"
-#     messages = [
-#         {
-#             "role": "system", "content": "You are a story teller. Generate a short story based on a simple narrative, the story should be no more than 100 words."
-#         },
-#         {
-#             "role": "user", "content": scenario
-#         },
-#     ]
-#     completion = client.chat.completions.create(
-#         model=model_id,
-#         messages=messages,
-#         max_tokens=100
-#     )
-
-#     story = completion.choices[0].message["content"]
-#     return story
-
-
 @st.cache_data()
 def generate_story(scenario: str, api_token: str, temperature=0.7):
     """Generates a story using the Llama model with reduced repetitiveness.
